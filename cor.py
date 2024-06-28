@@ -10,6 +10,7 @@ import sys
 from rich.logging import RichHandler
 
 import rules
+from config import FORMATTING, COMPILE_CMD, FILE_NAME, VALGRIND, MAX_POINTS, Errors, ERRORS, RECURSIVE_FUNCTIONS
 
 logging.basicConfig(
     format="%(message)s",
@@ -19,13 +20,6 @@ logging.basicConfig(
 )
 
 log = logging.getLogger(__name__)
-
-FILE_NAME = "lanterne_estive"
-
-SOLUTIONS = pathlib.Path(__file__).parent / "solutions"
-COMPILE_CMD = "gcc -Wall -std=c99 -pedantic -Wextra -lm -o {} {}"
-FORMATTING = "clang-format -style=microsoft --dry-run {}"
-VALGRIND = "valgrind --leak-check=full --error-exitcode=1 ./{}"
 
 
 def check_formatting(solution: pathlib.Path):
@@ -96,21 +90,11 @@ def main():
         "-s", "--source-folder", help="Source folder", default="solutions"
     )
     parser.add_argument(
-        "-l",
-        "--log-level",
-        help="Log level",
-        default="INFO",
-        choices=["INFO", "DEBUG", "ERROR", "WARNING"],
-    )
-    parser.add_argument(
         "-f",
         "--formatting",
         help="Check formatting",
         action="store_true",
         default=False,
-    )
-    parser.add_argument(
-        "-r", "--runtime", help="Check runtime", action="store_true", default=True
     )
     parser.add_argument(
         "-v",
@@ -121,8 +105,39 @@ def main():
     )
 
     args = parser.parse_args()
+    solutions = pathlib.Path(args.source_folder)
+    destination = pathlib.Path(args.destination)
+    formatted = args.formatting
+    valgrind = args.valgrind
 
-    for solution in sorted(SOLUTIONS.glob("**/*.c")):
+
+    if not solutions.exists():
+        log.critical(f"{solutions} does not exist")
+        sys.exit(os.EX_NOINPUT)
+
+    if not solutions.is_dir():
+        log.critical(f"{solutions} is not a directory")
+        sys.exit(os.EX_NOINPUT)
+
+    if not solutions.glob("**/*.c"):
+        log.critical(f"No C files found in {solutions}")
+        sys.exit(os.EX_NOINPUT)
+
+    if not destination.exists():
+        destination.mkdir()
+
+    if not destination.is_dir():
+        log.critical(f"{destination} is not a directory")
+        sys.exit(os.EX_NOINPUT)
+
+    for log_file in destination.glob("*.log"):
+        log_file.unlink()
+
+    results: list[tuple[str, int]] = []
+
+    for solution in sorted(solutions.glob("**/*.c")):
+        points = MAX_POINTS
+
         if solution.suffix != ".c":
             continue
 
@@ -135,14 +150,34 @@ def main():
             to_=content.index("NON MODIFICARE"),
         )
 
-        for name in ["uniformColor", "countColors"]:
+        for i, name in enumerate(["checkLanternColors", "countColors"]):
+            try:
+                func = list(filter(lambda f: f.name == name, functions))[0]
+            except IndexError:
+                log.error(f"{solution.parent.stem} - {name} not found")
+                points -= 2
+                continue
+            if not func.numbers_are_base_2() and i == 0:
+                log.error(f"{solution.parent.stem} - {name} does not use base 2")
+                points -= ERRORS[Errors.NO_BASE_2]
+
+        for name in RECURSIVE_FUNCTIONS:
             func = list(filter(lambda f: f.name == name, functions))[0]
             if not func.is_recursive():
                 log.error(f"{solution.parent.stem} - {name} is not recursive")
+                points -= ERRORS[Errors.NO_RECURSION]
+
+        for name in ["countColors"]:
+            func = list(filter(lambda f: f.name == name, functions))[0]
+            if not func.uses_bitwise_and():
+                log.error(f"{solution.parent.stem} - {name} does not use bitwise and")
+                points -= ERRORS[Errors.NO_BITWISE]
 
         compiled = check_compilation(solution)
         if not compiled:
             log.error(f"Failed to compile {solution.parent.stem}")
+            points -= ERRORS[Errors.COMPILATION]
+            results.append((" ".join(solution.parent.stem.split("_")[1:]), points))
             continue
 
         run = check_runtime(solution)
@@ -151,21 +186,31 @@ def main():
                 pass
             case 1:
                 log.warning(f"{solution.parent.stem} did not pass all tests")
+                points -= ERRORS[Errors.RUNTIME]
             case -1:
                 log.error(f"Runtime error in {solution.parent.stem}")
+                points -= 3
 
-        mem_leak_ok = check_valgrind(solution)
-        if not mem_leak_ok:
-            log.warning(f"Memory leak in {solution.parent.stem}")
+        if valgrind:
+            mem_leak_ok = check_valgrind(solution)
+            if not mem_leak_ok:
+                log.warning(f"Memory leak in {solution.parent.stem}")
+                points -= ERRORS[Errors.VALGRIND]
 
-        # formatting = check_formatting(solution)
-        # if formatting:
-        #     log.info(f"{solution} is well formatted")
+        if formatted:
+            formatting = check_formatting(solution)
+            if formatting:
+                log.info(f"{solution} is well formatted")
+                points -= ERRORS[Errors.FORMATTING]
 
-        if compiled and run == 0 and mem_leak_ok:
+        results.append((" ".join(solution.parent.stem.split("_")[1:]), points))
+        if compiled and run == 0 and mem_leak_ok if valgrind else True and formatting if formatted else True:
             log.info(f"{solution.parent.stem} is OK")
 
         os.remove(FILE_NAME)
+
+    for name, points in results:
+        log.info(f"{name}: {points}")
 
     sys.exit(os.EX_OK)
 

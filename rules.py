@@ -27,6 +27,33 @@ class Function:
     def is_recursive(self) -> bool:
         return self.name in self.body
 
+    def numbers_are_base_2(self) -> bool:
+        for i, c in enumerate(self.body):
+            # look for 001, 100, 010 patterns
+            if c == "0":
+                try:
+                    if self.body[i + 1] == "1" and self.body[i + 2] == "0" and (self.body[i - 1] not in "xb"):
+                        return False
+                    elif self.body[i + 1] == "0" and self.body[i + 2] == "1" and (self.body[i - 1] not in "xb"):
+                        return False
+                    elif self.body[i + 1] == "0" and self.body[i + 2] == "0" and (self.body[i - 1] not in "xb"):
+                        return False
+                except IndexError:
+                    return True
+        return True
+
+    def uses_bitwise_and(self) -> bool:
+        try:
+            first_and = self.body.index("&")
+        except ValueError:
+            return False
+        if first_and == -1:
+            return False
+        if self.body[first_and + 1] == "&":
+            return False
+        return True
+
+
 
 def get_function_name(func: str) -> str:
     return func.split()[1].split("(")[0].strip("* \t\n")
