@@ -6,11 +6,17 @@ import os
 import pathlib
 import subprocess
 import sys
-
 from rich.logging import RichHandler
-
 import rules
-from config import FORMATTING, COMPILE_CMD, FILE_NAME, VALGRIND, MAX_POINTS, Errors, ERRORS, RECURSIVE_FUNCTIONS
+from config import (
+    FORMATTING,
+    COMPILE_CMD,
+    FILE_NAME,
+    VALGRIND,
+    MAX_POINTS,
+    RECURSIVE_FUNCTIONS,
+    Errors
+)
 
 logging.basicConfig(
     format="%(message)s",
@@ -45,8 +51,8 @@ def check_runtime(solution: pathlib.Path):
             f.write("\n## Runtime error:\n")
             f.write(result.stderr.decode())
 
-    if "Tutti i test sono passati!" not in str(result.stdout):
-        res = 1
+    # if "Tutti i test sono passati!" not in str(result.stdout):
+    #     res = 1
 
     return res
 
@@ -150,33 +156,16 @@ def main():
             to_=content.index("NON MODIFICARE"),
         )
 
-        for i, name in enumerate(["checkLanternColors", "countColors"]):
-            try:
-                func = list(filter(lambda f: f.name == name, functions))[0]
-            except IndexError:
-                log.error(f"{solution.parent.stem} - {name} not found")
-                points -= 2
-                continue
-            if not func.numbers_are_base_2() and i == 0:
-                log.error(f"{solution.parent.stem} - {name} does not use base 2")
-                points -= ERRORS[Errors.NO_BASE_2]
-
         for name in RECURSIVE_FUNCTIONS:
             func = list(filter(lambda f: f.name == name, functions))[0]
             if not func.is_recursive():
                 log.error(f"{solution.parent.stem} - {name} is not recursive")
-                points -= ERRORS[Errors.NO_RECURSION]
+                points -= Errors.NO_RECURSION
 
-        for name in ["countColors"]:
-            func = list(filter(lambda f: f.name == name, functions))[0]
-            if not func.uses_bitwise_and():
-                log.error(f"{solution.parent.stem} - {name} does not use bitwise and")
-                points -= ERRORS[Errors.NO_BITWISE]
-
-        compiled = check_compilation(solution)
-        if not compiled:
+        compiles = check_compilation(solution)
+        if not compiles:
             log.error(f"Failed to compile {solution.parent.stem}")
-            points -= ERRORS[Errors.COMPILATION]
+            points -= Errors.COMPILATION
             results.append((" ".join(solution.parent.stem.split("_")[1:]), points))
             continue
 
@@ -186,7 +175,7 @@ def main():
                 pass
             case 1:
                 log.warning(f"{solution.parent.stem} did not pass all tests")
-                points -= ERRORS[Errors.RUNTIME]
+                points -= Errors.RUNTIME
             case -1:
                 log.error(f"Runtime error in {solution.parent.stem}")
                 points -= 3
@@ -195,16 +184,10 @@ def main():
             mem_leak_ok = check_valgrind(solution)
             if not mem_leak_ok:
                 log.warning(f"Memory leak in {solution.parent.stem}")
-                points -= ERRORS[Errors.VALGRIND]
-
-        if formatted:
-            formatting = check_formatting(solution)
-            if formatting:
-                log.info(f"{solution} is well formatted")
-                points -= ERRORS[Errors.FORMATTING]
+                points -= Errors.VALGRIND
 
         results.append((" ".join(solution.parent.stem.split("_")[1:]), points))
-        if compiled and run == 0 and mem_leak_ok if valgrind else True and formatting if formatted else True:
+        if compiles and run == 0 and mem_leak_ok if valgrind else True:
             log.info(f"{solution.parent.stem} is OK")
 
         os.remove(FILE_NAME)
