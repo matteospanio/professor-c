@@ -18,7 +18,7 @@ find "$1" -type f -name "*.c" | while read -r file; do
     dir=$(dirname "$file")
 
     # Rinomina il file in lanterne_estive.c
-    mv "$file" "$dir/percorsi.c" 2>/dev/null
+    mv "$file" "$dir/main.c" 2>/dev/null
 done
 
 exit 0

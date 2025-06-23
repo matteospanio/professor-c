@@ -7,7 +7,7 @@
 # Example:
 #   ./main.sh -d solutions -z submissions.zip
 
-TEMP=$(getopt -o 'd:z:' -n 'submission-unpacker' -- "$@")
+TEMP=$(getopt -o 'd:z:h' -n 'submission-unpacker' -- "$@")
 
 if [ $? -ne 0 ]; then
     echo 'Terminating...' >&2
@@ -30,6 +30,14 @@ while true; do
             echo "$ZIP"
             shift 2
             continue
+            ;;
+        '-h')
+            echo 'Usage: submission-unpacker.sh -d <dir> -z <zip>'
+            echo 'Options:'
+            echo '  -d <dir>  the destination folder where to unzip the files'
+            echo '  -z <zip>  the .zip file containing solutions downloaded from moodle'
+            echo '  -h        show this help message'
+            exit 0
             ;;
         '--')
             shift

@@ -15,14 +15,14 @@ from config import (
     VALGRIND,
     MAX_POINTS,
     RECURSIVE_FUNCTIONS,
-    Errors
+    Errors,
 )
 
 logging.basicConfig(
     format="%(message)s",
     datefmt="[%X]",
     level="NOTSET",
-    handlers=[RichHandler(rich_tracebacks=True)]
+    handlers=[RichHandler(rich_tracebacks=True)],
 )
 
 log = logging.getLogger(__name__)
@@ -44,12 +44,18 @@ def check_formatting(solution: pathlib.Path):
 
 def check_runtime(solution: pathlib.Path):
     res = 0
-    result = subprocess.run(f"./{FILE_NAME}", shell=True, capture_output=True)
-    if result.returncode != 0:
+    try:
+        result = subprocess.run(f"./{FILE_NAME}", shell=True, capture_output=True, timeout=5)
+        if result.returncode != 0:
+            res = -1
+            with open(f"logs/{solution.parent.stem}.log", "+a") as f:
+                f.write("\n## Runtime error:\n")
+                f.write(result.stderr.decode())
+    except subprocess.TimeoutExpired:
         res = -1
         with open(f"logs/{solution.parent.stem}.log", "+a") as f:
             f.write("\n## Runtime error:\n")
-            f.write(result.stderr.decode())
+            f.write("Timeout expired while running the program")
 
     # if "Tutti i test sono passati!" not in str(result.stdout):
     #     res = 1
@@ -70,7 +76,7 @@ def check_compilation(solution: pathlib.Path):
             f.write(out)
 
     if "warning" in out:
-        log.warning(f"{solution.parent.stem} compiled with warning")
+        log.warning(f"{solution.parent.stem} warning shows up during compilation")
 
     return res
 
@@ -96,13 +102,6 @@ def main():
         "-s", "--source-folder", help="Source folder", default="solutions"
     )
     parser.add_argument(
-        "-f",
-        "--formatting",
-        help="Check formatting",
-        action="store_true",
-        default=False,
-    )
-    parser.add_argument(
         "-v",
         "--valgrind",
         help="Check memory leak with valgrind",
@@ -113,9 +112,7 @@ def main():
     args = parser.parse_args()
     solutions = pathlib.Path(args.source_folder)
     destination = pathlib.Path(args.destination)
-    formatted = args.formatting
     valgrind = args.valgrind
-
 
     if not solutions.exists():
         log.critical(f"{solutions} does not exist")
@@ -150,11 +147,17 @@ def main():
         content = solution.read_text()
         content = rules.delete_comments(content, to_=content.index("SEGUE!!!"))
 
-        functions = rules.parse_functions(
-            content,
-            from_=content.index("#include <stdlib.h>"),
-            to_=content.index("NON MODIFICARE"),
-        )
+        try:
+            functions = rules.parse_functions(
+                content,
+                from_=content.index("#include <stdlib.h>"),
+                to_=content.index("NON MODIFICARE"),
+            )
+        except IndexError as e:
+            log.error(f"Failed to parse functions in {solution.parent.stem}: {e}")
+            points -= Errors.UNBALANCED_BRACES
+            results.append((" ".join(solution.parent.stem.split("_")[1:]), points))
+            continue
 
         for name in RECURSIVE_FUNCTIONS:
             func = list(filter(lambda f: f.name == name, functions))[0]

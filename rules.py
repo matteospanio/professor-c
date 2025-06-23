@@ -21,7 +21,7 @@ class Function:
     def prototype(self) -> str:
         return f"{self.return_type} {self.name}({', '.join(self.params)})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.prototype} {self.body}"
 
     def is_recursive(self) -> bool:
@@ -32,11 +32,23 @@ class Function:
             # look for 001, 100, 010 patterns
             if c == "0":
                 try:
-                    if self.body[i + 1] == "1" and self.body[i + 2] == "0" and (self.body[i - 1] not in "xb"):
+                    if (
+                        self.body[i + 1] == "1"
+                        and self.body[i + 2] == "0"
+                        and (self.body[i - 1] not in "xb")
+                    ):
                         return False
-                    elif self.body[i + 1] == "0" and self.body[i + 2] == "1" and (self.body[i - 1] not in "xb"):
+                    elif (
+                        self.body[i + 1] == "0"
+                        and self.body[i + 2] == "1"
+                        and (self.body[i - 1] not in "xb")
+                    ):
                         return False
-                    elif self.body[i + 1] == "0" and self.body[i + 2] == "0" and (self.body[i - 1] not in "xb"):
+                    elif (
+                        self.body[i + 1] == "0"
+                        and self.body[i + 2] == "0"
+                        and (self.body[i - 1] not in "xb")
+                    ):
                         return False
                 except IndexError:
                     return True
@@ -52,7 +64,6 @@ class Function:
         if self.body[first_and + 1] == "&":
             return False
         return True
-
 
 
 def get_function_name(func: str) -> str:
@@ -144,10 +155,7 @@ def parse_functions(txt: str, from_: int = 0, to_: int | None = None) -> list[Fu
         before_func = "\n".join(
             filter(
                 lambda s: s != "" and not s.startswith("#"),
-                (src[name : m.start_idx]
-                    .strip(" \t\n;}")
-                    .splitlines()
-                )
+                (src[name : m.start_idx].strip(" \t\n;}").splitlines()),
             )
         )
 
@@ -177,7 +185,7 @@ typedef struct {
     /*bbb*/
 } Point;
 
-int distance(Point *p1, Point *p2) {
+int distance(Point *p1, Point *p2){
     return (p1->x - p2->x) * (p1->x - p2->x) + (p1->y - p2->y) * (p1->y - p2->y);
 }
 
