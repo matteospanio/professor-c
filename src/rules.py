@@ -8,7 +8,6 @@ class Function:
     body: str
     name: str
     params: list[str]
-    prototype: str
     return_type: str
 
     def __init__(self, body: str, name: str, params: list[str], return_type: str):
@@ -144,7 +143,8 @@ def parse_functions(txt: str, from_: int = 0, to_: int | None = None) -> list[Fu
                 matches.append(_FuncBody(start, i, src[start : i + 1]))
 
     if stack:
-        logger.error("Unbalanced braces")
+        start = stack.pop()
+        matches.append(_FuncBody(start, len(src), src[start : len(src) + 1]))
 
     for m in matches:
         try:
