@@ -1,6 +1,7 @@
 import yaml
 from dataclasses import dataclass
 
+
 def load_config(filename: str):
     with open(filename, "r") as f:
         return yaml.safe_load(f)
@@ -22,6 +23,7 @@ class Points:
     compilation_error: int
     warnings: int
     pseudo_code: int
+    test_failed: int
 
 
 @dataclass
@@ -37,9 +39,11 @@ class Checks:
     invalid_lvalues: bool
     invalid_rvalues: bool
     compilation_errors: bool
-    Warnings: bool
+    warnings: bool
     pseudo_code: bool
     recursion_required: bool
+    test_pass: bool
+
 
 @dataclass
 class Config:
@@ -51,7 +55,9 @@ class Config:
     def from_file(filename: str):
         config_data = load_config(filename)
         return Config(
-            points=Points(**config_data['points']),
-            recursive_functions=RecursiveFunctions(**config_data['recursive_functions']),
-            checks=Checks(**config_data['checks'])
+            points=Points(**config_data["points"]),
+            recursive_functions=RecursiveFunctions(
+                **config_data["recursive_functions"]
+            ),
+            checks=Checks(**config_data["checks"]),
         )

@@ -13,6 +13,7 @@ points:
   compilation_error: 2
   execution_error: 2
   warnings: 0
+  test_failed: 2
   pseudo_code: 2
 
 checks:
@@ -29,6 +30,9 @@ checks:
   runtime_errors: true
   unmatched_parentheses: true
   recursion_required: true
+  test_pass: true
 
 recursive_functions:
   allowed_functions:
+    - countColors
+    - uniformColor

@@ -6,6 +6,7 @@ from .invalid_lvalue import check_invalid_lvalue
 from .invalid_rvalue import check_invalid_rvalue
 from .invalid_assignment import check_invalid_assignment
 from .recursion import check_recursive_functions
+from .test_pass import check_test_pass
 from .invalid_results import check_pseudo_code
 
 from .compilation import check_compilation
@@ -15,6 +16,7 @@ from .warnings import check_warnings
 
 from utils import compile, CheckResult
 from pathlib import Path
+
 
 def run_checks(file_path: str, config) -> list[CheckResult]:
 
@@ -29,6 +31,7 @@ def run_checks(file_path: str, config) -> list[CheckResult]:
         check_invalid_rvalue,
         check_invalid_assignment,
         check_pseudo_code,
+        check_test_pass,
     ]
 
     checks = [
